@@ -29,7 +29,7 @@ class LabelingApp:
         self.namedWindow = 'Multi-Class Object-Containing Frame Miner'
 
         self.key_map = {}
-        safe_names = class_names[:5] if class_names else []
+        safe_names = class_names[:7] if class_names else []
         for i, code in enumerate(AppConfig.BASE_KEYS):
             name = safe_names[i] if i < len(safe_names) else AppConfig.BASE_CHARS[i]
             self.key_map[code] = name
@@ -88,7 +88,7 @@ class LabelingApp:
 
     def _handle_input(self):
         delay = 0 if self.paused else int(1000 / (self.video.fps * self.speed))
-        key = cv2.waitKey(max(1, delay)) & 0xFF
+        key = cv2.waitKey(max(0, delay)) & 0xFF
 
         if key == 27:  # ESC
             self.running = False

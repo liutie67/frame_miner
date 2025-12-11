@@ -6,7 +6,7 @@ class AppConfig:
     存储颜色、按键映射、路径默认值等常量。
     """
 
-    __version__ = '3.3.0'
+    __version__ = '3.3.1'
 
     # 基础颜色定义 (BGR 格式)
     COLORS = {
@@ -30,12 +30,14 @@ class AppConfig:
         'c': (255, 165, 0),   # 蓝/橙
         'v': (0, 255, 255),   # 黄
         'b': (255, 255, 0),   # 青
+        'n': (96, 164, 244),
+        'm': (266, 43, 138),
         'default': (200, 200, 200)
     }
 
     # 基础按键定义
-    BASE_KEYS = [ord('z'), ord('x'), ord('c'), ord('v'), ord('b')]
-    BASE_CHARS = ['z', 'x', 'c', 'v', 'b']
+    BASE_KEYS = [ord('z'), ord('x'), ord('c'), ord('v'), ord('b'), ord('n'), ord('m')]
+    BASE_CHARS = ['z', 'x', 'c', 'v', 'b', 'n', 'm']
 
     # 字体配置
     FONT = cv2.FONT_HERSHEY_SIMPLEX
