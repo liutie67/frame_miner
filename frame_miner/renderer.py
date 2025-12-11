@@ -79,7 +79,7 @@ class UIRenderer:
             color = self.cfg.CLASS_COLORS.get(short_code, self.cfg.COLORS['white'])
 
             text = f"[{short_code.upper()}] {label}"
-            self.draw_shadow_text(display_img, text, (10, start_y + i * 30), 0.7, color, 1, offset=1)
+            self.draw_shadow_text(display_img, text, (20, start_y + i * 30), 0.7, color, 1, offset=1)
 
         # 4. Center Marker Notification (Ghost Marker)
         if current_state['is_marked']:
