@@ -1,0 +1,134 @@
+import cv2
+import numpy as np
+from .config import AppConfig
+
+
+class UIRenderer:
+    """
+    负责将UI元素绘制到视频帧上。
+    未来可在此扩展 PIL 绘制以支持中文字体。
+    """
+
+    def __init__(self, key_map, class_names):
+        """
+        Parameters
+        ----------
+        key_map : dict
+            按键码到标签的映射。
+        class_names : list
+            类别名称列表。
+        """
+        self.key_map = key_map
+        self.class_names = class_names
+        self.cfg = AppConfig
+
+    def get_central_pos(self, msg, target_width, target_height, direction='w'):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+
+        # 计算文字大小以居中
+        (w_title, h_title), _ = cv2.getTextSize(msg_title, font, 1.8, 3)
+        (w_sub, h_sub), _ = cv2.getTextSize(msg_sub, font, 1.0, 2)
+
+        x_title = (w - w_title) // 2
+        x_sub = (w - w_sub) // 2
+        y_center = h // 2
+
+    def draw_shadow_text(self, img, text, pos, scale, color, thickness, offset=2):
+        """绘制带阴影的文字，增加对比度。"""
+        x, y = pos
+        # Shadow
+        cv2.putText(img, text, (x + offset, y + offset),
+                    self.cfg.FONT, scale, self.cfg.COLORS['shadow'], thickness)
+        # Body
+        cv2.putText(img, text, (x, y),
+                    self.cfg.FONT, scale, color, thickness)
+
+    def draw_interface(self, frame, current_state):
+        """
+        绘制主界面所有元素（不修改原图，返回复本）。
+
+        Parameters
+        ----------
+        frame : np.ndarray
+            原始视频帧。
+        current_state : dict
+            包含当前UI所需的所有状态数据 (frame_idx, fps, markers, message, etc.)
+
+        Returns
+        -------
+        np.ndarray
+            绘制了UI的图像。
+        """
+        display_img = frame.copy()
+        h, w = display_img.shape[:2]
+
+        # 1. Info Text
+        info = f"Frame: {current_state['curr_pos']}/{current_state['total_frames']} | Speed: x{current_state['speed']}"
+        self.draw_shadow_text(display_img, info, (20, 40), 1, (174, 20, 255), 2)
+
+        # 2. Status
+        status = "PAUSED" if current_state['paused'] else "PLAYING"
+        s_color = self.cfg.COLORS['red'] if current_state['paused'] else self.cfg.COLORS['green']
+        self.draw_shadow_text(display_img, status, (w - 150, 40), 1, s_color, 2)
+
+        # 3. Menu List (Vertical)
+        start_y = 80
+        for i, (k_code, label) in enumerate(self.key_map.items()):
+            # Find short code for color (e.g., 'z')
+            short_code = self.cfg.BASE_CHARS[i] if i < len(self.cfg.BASE_CHARS) else 'default'
+            color = self.cfg.CLASS_COLORS.get(short_code, self.cfg.COLORS['white'])
+
+            text = f"[{short_code.upper()}] {label}"
+            self.draw_shadow_text(display_img, text, (10, start_y + i * 30), 0.7, color, 1, offset=1)
+
+        # 4. Center Marker Notification (Ghost Marker)
+        if current_state['is_marked']:
+            m_label = current_state['marker_label']
+            # Simple logic to get color from label
+            m_color = self.cfg.CLASS_COLORS.get(m_label, self.cfg.COLORS['white'])
+
+            center_text = f"[MARKED: {m_label.upper()}]"
+            text_size = cv2.getTextSize(center_text, self.cfg.FONT, 1.5, 3)[0]
+            cx, cy = (w - text_size[0]) // 2, h // 2
+
+            # Semi-transparent bg
+            overlay = display_img.copy()
+            cv2.rectangle(overlay, (cx - 10, cy - 40), (cx + text_size[0] + 10, cy + 10), (0, 0, 0), -1)
+            cv2.addWeighted(overlay, 0.5, display_img, 0.5, 0, display_img)
+
+            self.draw_shadow_text(display_img, center_text, (cx, cy), 1.5, m_color, 3)
+
+        # 5. Global Message (Toast)
+        msg = current_state.get('ui_message')
+        if msg:
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            fontscale = 1.8
+            thickness = 3
+            h, w = display_img.shape[:2]
+            (w_msg, h_msg), _ = cv2.getTextSize(msg, font, fontscale, thickness)
+            self.draw_shadow_text(display_img, msg, ((w-w_msg)//2, h//2 - h_msg*2), fontscale, self.cfg.COLORS['yellow'], thickness)
+
+        # 6. Progress Bar
+        self._draw_progress_bar(display_img, current_state['curr_pos'],
+                                current_state['total_frames'], current_state['markers'])
+
+        return display_img
+
+    def _draw_progress_bar(self, img, curr, total, markers):
+        h, w = img.shape[:2]
+        bar_h = 20
+        bar_y = h - 30
+
+        # Background
+        cv2.rectangle(img, (0, bar_y), (w, bar_y + bar_h), self.cfg.COLORS['gray'], -1)
+
+        if total > 0:
+            # Progress
+            pw = int((curr / total) * w)
+            cv2.rectangle(img, (0, bar_y), (pw, bar_y + bar_h), self.cfg.COLORS['light_gray'], -1)
+
+            # Markers
+            for f_id, label_code in markers.items():
+                mx = int((f_id / total) * w)
+                c = self.cfg.CLASS_COLORS.get(label_code, self.cfg.COLORS['white'])
+                cv2.line(img, (mx, bar_y), (mx, bar_y + bar_h), c, 2)
