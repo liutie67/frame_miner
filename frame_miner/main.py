@@ -188,7 +188,7 @@ class LabelingApp:
         # 提示语 (OpenCV默认不支持中文，使用英文替代)
         # "Hit Z/X/C/V/B at the LAST frame!"
         # "(Press SPACE to Start)"
-        msg_title = "Hit Z/X/C/V/B at the LAST frame you can see object!"
+        msg_title = "Hit Z/X/C/V/B/N/M at the LAST frame you can see object!"
         msg_sub = "(Switch Input Method to ENG! & Press SPACE to Start)"
 
         font = cv2.FONT_HERSHEY_SIMPLEX
