@@ -235,5 +235,5 @@ class LabelingApp:
 
 
 if __name__ == "__main__":
-    app = LabelingApp(r"C:\video.mp4", "dataset", ['car', 'person'])
+    app = LabelingApp(r"C:\video.mp4", "dataset", ['kilometer', 'hectometer', 'camera', 'white kilometer', 'point kilometrique', 'tunnel kilometer', 'tunnel hectometer'])
     app.run()
