@@ -106,7 +106,7 @@ class UIRenderer:
             thickness = 3
             h, w = display_img.shape[:2]
             (w_msg, h_msg), _ = cv2.getTextSize(msg, font, fontscale, thickness)
-            self.draw_shadow_text(display_img, msg, ((w-w_msg)//2, h//2 - h_msg*2), fontscale, self.cfg.COLORS['yellow'], thickness)
+            self.draw_shadow_text(display_img, msg, ((w-w_msg)//2, h//2 - h_msg*2), fontscale, self.cfg.COLORS['white'], thickness)
 
         # 6. Progress Bar
         self._draw_progress_bar(display_img, current_state['curr_pos'],
