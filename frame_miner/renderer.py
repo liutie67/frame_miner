@@ -137,8 +137,10 @@ class UIRenderer:
 
         # Background
         cv2.rectangle(img, (0, bar_y), (w, bar_y + bar_h), self.cfg.COLORS['gray'], -1)
-        status_help_line3 = "[BACKSPACE] Withdraw]"
-        self.draw_shadow_text(img, status_help_line3, (w - 400, bar_y - bar_h), 1, self.cfg.COLORS['light_gray'], 2)
+        status_help_line3 = "[BACKSPACE] Withdraw"
+        self.draw_shadow_text(img, status_help_line3, (w - 375, bar_y - bar_h), 1, self.cfg.COLORS['light_gray'], 1)
+        status_help_line3 = "[ESC] Quit"
+        self.draw_shadow_text(img, status_help_line3, (20, bar_y - bar_h), 1, self.cfg.COLORS['light_gray'], 1)
 
         if total > 0:
             # Progress
