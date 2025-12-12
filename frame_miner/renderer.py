@@ -89,13 +89,14 @@ class UIRenderer:
             else:
                 m_color = self.cfg.CLASS_COLORS.get(m_label, self.cfg.COLORS['white'])
 
-            fontScale = 2.5
+            fontScale = 5
+            fontThickness = 10
             if len(m_label) == 1:
                 if ord(m_label) in self.key_map.keys():
                     center_text = f"[{self.key_map[ord(m_label)]}]"
             else:
                 center_text = f"[{m_label}]"
-            text_size = cv2.getTextSize(center_text, self.cfg.FONT, fontScale, 3)[0]
+            text_size = cv2.getTextSize(center_text, self.cfg.FONT, fontScale, fontThickness)[0]
             cx, cy = (w - text_size[0]) // 2, h // 2
 
             # Semi-transparent bg
@@ -103,7 +104,7 @@ class UIRenderer:
             # cv2.rectangle(overlay, (cx - 10, cy - 40), (cx + text_size[0] + 10, cy + 10), (0, 0, 0), -1)
             # cv2.addWeighted(overlay, 0.5, display_img, 0.5, 0, display_img)
 
-            self.draw_shadow_text(display_img, center_text, (cx, cy), fontScale, m_color, 3)
+            self.draw_shadow_text(display_img, center_text, (cx, cy), fontScale, m_color, fontThickness)
 
         # 5. Global Message (Toast)
         msg = current_state.get('ui_message')
