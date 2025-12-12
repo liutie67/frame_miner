@@ -23,15 +23,13 @@ class UIRenderer:
         self.cfg = AppConfig
 
     def get_central_pos(self, msg, target_width, target_height, direction='w'):
-        font = cv2.FONT_HERSHEY_SIMPLEX
-
         # 计算文字大小以居中
-        (w_title, h_title), _ = cv2.getTextSize(msg_title, font, 1.8, 3)
-        (w_sub, h_sub), _ = cv2.getTextSize(msg_sub, font, 1.0, 2)
+        (w_title, h_title), _ = cv2.getTextSize(msg, self.cfg.FONT, 1.8, 3)
+        (w_sub, h_sub), _ = cv2.getTextSize(msg, self.cfg.FONT, 1.0, 2)
 
-        x_title = (w - w_title) // 2
-        x_sub = (w - w_sub) // 2
-        y_center = h // 2
+        x_title = (target_width - w_title) // 2
+        x_sub = (target_width - w_sub) // 2
+        y_center = target_height // 2
 
     def draw_shadow_text(self, img, text, pos, scale, color, thickness, offset=2):
         """绘制带阴影的文字，增加对比度。"""
@@ -87,26 +85,32 @@ class UIRenderer:
             # Simple logic to get color from label
             m_color = self.cfg.CLASS_COLORS.get(m_label, self.cfg.COLORS['white'])
 
-            center_text = f"[MARKED: {m_label.upper()}]"
-            text_size = cv2.getTextSize(center_text, self.cfg.FONT, 1.5, 3)[0]
+            fontScale = 2.5
+            if len(m_label) == 1:
+                if ord(m_label) in self.key_map.keys():
+                    center_text = f"[{self.key_map[ord(m_label)]}]"
+            else:
+                center_text = f"[{m_label}]"
+            text_size = cv2.getTextSize(center_text, self.cfg.FONT, fontScale, 3)[0]
             cx, cy = (w - text_size[0]) // 2, h // 2
 
             # Semi-transparent bg
-            overlay = display_img.copy()
-            cv2.rectangle(overlay, (cx - 10, cy - 40), (cx + text_size[0] + 10, cy + 10), (0, 0, 0), -1)
-            cv2.addWeighted(overlay, 0.5, display_img, 0.5, 0, display_img)
+            # overlay = display_img.copy()
+            # cv2.rectangle(overlay, (cx - 10, cy - 40), (cx + text_size[0] + 10, cy + 10), (0, 0, 0), -1)
+            # cv2.addWeighted(overlay, 0.5, display_img, 0.5, 0, display_img)
 
-            self.draw_shadow_text(display_img, center_text, (cx, cy), 1.5, m_color, 3)
+            self.draw_shadow_text(display_img, center_text, (cx, cy), fontScale, m_color, 3)
 
         # 5. Global Message (Toast)
         msg = current_state.get('ui_message')
         if msg:
             font = cv2.FONT_HERSHEY_SIMPLEX
             fontscale = 1.8
-            thickness = 3
+            thickness = 1
             h, w = display_img.shape[:2]
             (w_msg, h_msg), _ = cv2.getTextSize(msg, font, fontscale, thickness)
-            self.draw_shadow_text(display_img, msg, ((w-w_msg)//2, h//2 - h_msg*2), fontscale, self.cfg.COLORS['white'], thickness)
+            self.draw_shadow_text(display_img, msg, ((w-w_msg)//2, h//2 - h_msg*3), fontscale,
+                                  self.cfg.COLORS['white'], thickness, offset=1)
 
         # 6. Progress Bar
         self._draw_progress_bar(display_img, current_state['curr_pos'],
