@@ -36,8 +36,8 @@ class AppConfig:
     }
 
     # 基础按键定义
-    BASE_KEYS = [ord('z'), ord('x'), ord('c'), ord('v'), ord('b'), ord('n'), ord('m')]
-    BASE_CHARS = ['z', 'x', 'c', 'v', 'b', 'n', 'm']
+    BASE_KEYS = [ord('z'), ord('x'), ord('c'), ord('v'), ord('b'), ord('n'), ord('m'), ord('o')]
+    BASE_CHARS = ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'other']
 
     # 字体配置
     FONT = cv2.FONT_HERSHEY_SIMPLEX
