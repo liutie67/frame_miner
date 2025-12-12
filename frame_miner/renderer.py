@@ -60,17 +60,24 @@ class UIRenderer:
         display_img = frame.copy()
         h, w = display_img.shape[:2]
 
+        start_y = 80
         # 1. Info Text
         info = f"Frame: {current_state['curr_pos']}/{current_state['total_frames']} | Speed: x{current_state['speed']}"
+        info_help = " [1][2][3][5]"
+        info = info + info_help
         self.draw_shadow_text(display_img, info, (20, 40), 1, (174, 20, 255), 2)
 
         # 2. Status
-        status = "PAUSED" if current_state['paused'] else "PLAYING"
+        status = "[SPACE] PAUSED" if current_state['paused'] else "[SPACE] PLAYING"
         s_color = self.cfg.COLORS['red'] if current_state['paused'] else self.cfg.COLORS['green']
-        self.draw_shadow_text(display_img, status, (w - 150, 40), 1, s_color, 2)
+        self.draw_shadow_text(display_img, status, (w - 300, 40), 1, s_color, 2)
+        if current_state['paused']:
+            status_help_line1 = "[D] Previous frame"
+            self.draw_shadow_text(display_img, status_help_line1, (w - 330, 100), 1, s_color, 1)
+            status_help_line2 = "[F] Next frame"
+            self.draw_shadow_text(display_img, status_help_line2, (w - 330, 100 + 45), 1, s_color, 1)
 
         # 3. Menu List (Vertical)
-        start_y = 80
         for i, (k_code, label) in enumerate(self.key_map.items()):
             # Find short code for color (e.g., 'z')
             short_code = self.cfg.BASE_CHARS[i] if i < len(self.cfg.BASE_CHARS) else 'default'
@@ -130,6 +137,8 @@ class UIRenderer:
 
         # Background
         cv2.rectangle(img, (0, bar_y), (w, bar_y + bar_h), self.cfg.COLORS['gray'], -1)
+        status_help_line3 = "[BACKSPACE] Withdraw]"
+        self.draw_shadow_text(img, status_help_line3, (w - 400, bar_y - bar_h), 1, self.cfg.COLORS['light_gray'], 2)
 
         if total > 0:
             # Progress
