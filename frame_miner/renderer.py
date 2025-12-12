@@ -139,5 +139,10 @@ class UIRenderer:
             # Markers
             for f_id, label_code in markers.items():
                 mx = int((f_id / total) * w)
-                c = self.cfg.CLASS_COLORS.get(label_code, self.cfg.COLORS['white'])
-                cv2.line(img, (mx, bar_y), (mx, bar_y + bar_h), c, 2)
+                if label_code in self.key_map.values():
+                    key = next((k for k, v in self.key_map.items() if v == label_code), None)
+                    c = self.cfg.CLASS_COLORS.get(chr(key), self.cfg.COLORS['white'])
+                    cv2.line(img, (mx, bar_y), (mx, bar_y + bar_h), c, 1)
+                else:
+                    c = self.cfg.CLASS_COLORS.get(label_code, self.cfg.COLORS['white'])
+                    cv2.line(img, (mx, bar_y), (mx, bar_y + bar_h), c, 2)
