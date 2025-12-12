@@ -82,8 +82,12 @@ class UIRenderer:
         # 4. Center Marker Notification (Ghost Marker)
         if current_state['is_marked']:
             m_label = current_state['marker_label']
-            # Simple logic to get color from label
-            m_color = self.cfg.CLASS_COLORS.get(m_label, self.cfg.COLORS['white'])
+
+            if m_label in self.key_map.values():
+                key = next((k for k, v in self.key_map.items() if v == m_label), None)
+                m_color = self.cfg.CLASS_COLORS.get(chr(key), self.cfg.COLORS['white'])
+            else:
+                m_color = self.cfg.CLASS_COLORS.get(m_label, self.cfg.COLORS['white'])
 
             fontScale = 2.5
             if len(m_label) == 1:
@@ -106,10 +110,10 @@ class UIRenderer:
         if msg:
             font = cv2.FONT_HERSHEY_SIMPLEX
             fontscale = 1.8
-            thickness = 1
+            thickness = 2
             h, w = display_img.shape[:2]
             (w_msg, h_msg), _ = cv2.getTextSize(msg, font, fontscale, thickness)
-            self.draw_shadow_text(display_img, msg, ((w-w_msg)//2, h//2 - h_msg*3), fontscale,
+            self.draw_shadow_text(display_img, msg, ((w-w_msg)//2, start_y + h_msg//2), fontscale,
                                   self.cfg.COLORS['white'], thickness, offset=1)
 
         # 6. Progress Bar
