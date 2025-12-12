@@ -31,7 +31,9 @@ class UIRenderer:
         x_sub = (target_width - w_sub) // 2
         y_center = target_height // 2
 
-    def draw_shadow_text(self, img, text, pos, scale, color, thickness, offset=2):
+    def draw_shadow_text(self, img, text, pos, scale, color, thickness, offset=None):
+        if offset is None:
+            offset = thickness
         """绘制带阴影的文字，增加对比度。"""
         x, y = pos
         # Shadow
