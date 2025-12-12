@@ -188,13 +188,13 @@ class LabelingApp:
         # 提示语 (OpenCV默认不支持中文，使用英文替代)
         # "Hit Z/X/C/V/B at the LAST frame!"
         # "(Press SPACE to Start)"
-        msg_title = "Hit Z/X/C/V/B/N/M at the LAST frame you can see object!"
-        msg_sub = "(Switch Input Method to ENG! & Press SPACE to Start)"
+        msg_title = "Hit [Z]/[X]/[C]/[V]/[B]/[N]/[M] at the LAST frame you can see object!"
+        msg_sub = "(Switch Input Method to ENG! & Press [SPACE] to Start)"
 
         font = cv2.FONT_HERSHEY_SIMPLEX
 
         # 计算文字大小以居中
-        (w_title, h_title), _ = cv2.getTextSize(msg_title, font, 1.8, 3)
+        (w_title, h_title), _ = cv2.getTextSize(msg_title, font, self.cfg.FONT_SCALE_TITLE, 3)
         (w_sub, h_sub), _ = cv2.getTextSize(msg_sub, font, 1.0, 2)
 
         x_title = (w - w_title) // 2
@@ -203,8 +203,8 @@ class LabelingApp:
 
         # 绘制文字: 阴影(黑色) + 本体(亮色) 实现高对比度
         # 标题 (亮黄色)
-        cv2.putText(intro_frame, msg_title, (x_title + 2, y_center - 10 + 2), font, 1.8, (0, 0, 0), 3)  # 阴影
-        cv2.putText(intro_frame, msg_title, (x_title, y_center - 10), font, 1.8, (0, 255, 255), 3)  # 本体
+        cv2.putText(intro_frame, msg_title, (x_title + 2, y_center - 10 + 2), font, self.cfg.FONT_SCALE_TITLE, (0, 0, 0), 3)  # 阴影
+        cv2.putText(intro_frame, msg_title, (x_title, y_center - 10), font, self.cfg.FONT_SCALE_TITLE, (0, 255, 255), 3)  # 本体
 
         # 副标题 (亮绿色)
         cv2.putText(intro_frame, msg_sub, (x_sub + 2, y_center + 50 + 2), font, 1.0, (0, 0, 0), 2)  # 阴影

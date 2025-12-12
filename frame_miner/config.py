@@ -41,5 +41,5 @@ class AppConfig:
 
     # 字体配置
     FONT = cv2.FONT_HERSHEY_SIMPLEX
-    FONT_SCALE_TITLE = 1.8
+    FONT_SCALE_TITLE = 1.5
     FONT_SCALE_NORMAL = 0.7
