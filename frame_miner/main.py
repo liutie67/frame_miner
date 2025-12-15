@@ -359,7 +359,7 @@ class LabelingApp:
                 # 只有当 i 是 new_interval 的倍数或者是0时才取？
                 # 不，逻辑是：每隔 new_interval 取一帧
                 # 原逻辑: f_idx = curr_pos + (i * interval)
-                f_idx = center_frame_id + (i * new_interval)
+                f_idx = (center_frame_id - 1) + (i * new_interval)
                 if 0 <= f_idx < self.video.total_frames:
                     target_frames.append(f_idx)
 

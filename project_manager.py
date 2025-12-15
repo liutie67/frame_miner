@@ -186,7 +186,7 @@ class ProjectManager:
 
         # 1. 构建新的项目目录 (e.g. "D:/Datasets/Traffic_rebuilt")
         # 区别于原来的 "_labeled"，这里用 "_rebuilt" 或自定义后缀
-        new_project_dir = target_root / f"{self.source_dir.name}_rebuilt_extractNum_{new_extract_num}_interval_{new_interval}.csv"
+        new_project_dir = target_root / f"{self.source_dir.name}_rebuilt_extractNum_{new_extract_num}_interval_{new_interval}"
         new_project_dir.mkdir(parents=True, exist_ok=True)
 
         # 2. 扫描视频文件
