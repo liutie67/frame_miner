@@ -1,6 +1,9 @@
 from pathlib import Path
 import cv2
 import time
+import ctypes
+import platform
+import shutil
 
 from .config import AppConfig
 from .data_manager import DataManager
@@ -8,8 +11,6 @@ from .renderer import UIRenderer
 from .video_controller import VideoController
 
 
-import ctypes
-import platform
 def set_window_title_utf8(opencv_window_id, new_title):
     """
     强制设置 OpenCV 窗口标题支持中文 (仅限 Windows)
@@ -275,6 +276,114 @@ class LabelingApp:
             elif start_key == 27:  # ESC
                 self.cleanup()
                 return
+
+    def rebuild_dataset(self, new_save_dir, new_extract_num, new_interval, copy_csv=True):
+        """
+        根据现有的标记，使用新的参数（回溯帧数、间隔）重新生成图片数据集。
+
+        Parameters
+        ----------
+        new_save_dir : str or Path
+            新的数据集保存根目录。
+        new_extract_num : int
+            新的向前回溯截取数量。
+        new_interval : int
+            新的截取间隔帧数。
+        copy_csv : bool, default True
+            是否将原始的标签CSV文件复制到新目录。
+        """
+
+        # 1. 路径准备
+        new_root = Path(new_save_dir) / self.video.name   # if new_save_dir == save_dir 会报错
+        new_root.mkdir(parents=True, exist_ok=True)
+        print(f"\n=== 开始重构数据集 ===")
+        print(f"源视频: {self.video.name}")
+        print(f"目标目录: {new_root}")
+        print(f"参数变更: extract {self.extract_num}->{new_extract_num}, interval {self.interval}->{new_interval}")
+
+        # 2. 获取所有已标记的帧 (从 DataManager 中获取)
+        # 格式: {frame_id: 'short_code'} (例如 {150: 'z'})
+        markers = self.data.global_marked_frames
+
+        if not markers:
+            print("⚠️ 当前没有加载任何标记，无法重构。请先运行程序或确保CSV已加载。")
+            return
+
+        # 3. 复制 CSV 文件 (如果需要)
+        if copy_csv and self.data.csv_path.exists():
+            new_csv_path = new_root / self.data.csv_path.name
+            shutil.copy2(self.data.csv_path, new_csv_path)
+            print(f"已复制 CSV 到: {new_csv_path}")
+
+        # 4. 优化：按帧号排序
+        # 视频 Seek 是很慢的操作，按顺序读取比跳来跳去快得多
+        sorted_marker_items = sorted(markers.items(), key=lambda x: x[0])
+        total_markers = len(sorted_marker_items)
+
+        print(f"共需处理 {total_markers} 个标记点...")
+
+        # 5. 遍历重构
+        for idx, (center_frame_id, short_code) in enumerate(sorted_marker_items):
+            # (A) 解析类别名，用于创建文件夹
+            # 我们需要从 short_code ('z') 反查出 long_name ('class_car')
+            # 这里的逻辑依赖于你之前的 key_map 结构
+            label_long_name = "unknown"
+
+            # 尝试查找对应的完整名称
+            # 假设 short_code 是 'z'，我们要找 key_map 中对应的 value
+            # 注意：这里需要你根据实际的 key_map 结构微调
+            # 如果 key_map 是 {ord('z'): 'car'}, 我们需要反推
+            found_name = False
+            for k_code, k_name in self.key_map.items():
+                # 将 ASCII 码转为字符对比 (如 122 -> 'z')
+                # 或者如果 short_code 是 'default'
+                k_char = chr(k_code).lower() if k_code < 256 else '?'
+                if k_char == short_code:
+                    label_long_name = f"class_{k_name}"
+                    found_name = True
+                    break
+
+            if not found_name:
+                # 如果没找到映射（比如是旧数据），直接用 code
+                label_long_name = f"class_{short_code}"
+
+            # (B) 创建分类子文件夹
+            class_dir = new_root / label_long_name
+            class_dir.mkdir(exist_ok=True)
+
+            # (C) 计算新的目标帧列表
+            # range(-new, 1) -> 生成 -5, -4, ... 0
+            target_offsets = range(-new_extract_num, 1)
+            target_frames = []
+            for i in target_offsets:
+                # 只有当 i 是 new_interval 的倍数或者是0时才取？
+                # 不，逻辑是：每隔 new_interval 取一帧
+                # 原逻辑: f_idx = curr_pos + (i * interval)
+                f_idx = center_frame_id + (i * new_interval)
+                if 0 <= f_idx < self.video.total_frames:
+                    target_frames.append(f_idx)
+
+            # (D) 读取并保存
+            for t_frame in target_frames:
+                # 这是一个耗时操作
+                self.video.seek(t_frame)
+                ret, img = self.video.read()  # 这里注意 VideoController.read 返回 (ret, frame)
+
+                if ret and img is not None:
+                    # 文件名格式: VideoName_ShortCode_FrameID.jpg
+                    fname = f"{self.video.name}_{short_code}_{t_frame:06d}.jpg"
+                    save_path = class_dir / fname
+
+                    # 只有文件不存在时才写入，避免重复 IO
+                    if not save_path.exists():
+                        # cv2.imwrite(str(save_path), img)
+                        self.data.save_image_safe(str(save_path), img)
+
+            # 简单的进度打印
+            if (idx + 1) % 10 == 0:
+                print(f"进度: {idx + 1}/{total_markers} 完成")
+
+        print("=== 数据集重构完成 ===")
 
     def cleanup(self):
         self.video.release()
