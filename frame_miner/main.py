@@ -36,9 +36,27 @@ def set_window_title_utf8(opencv_window_id, new_title):
 class LabelingApp:
     """
     主应用程序控制器。
+
+    Parameters
+    ----------
+    video_path : str
+        视频文件的路径。
+    save_dir : str, optional
+        数据保存根目录。最终结构为: save_dir / 视频名 / class_x / 图片.jpg
+    extract_num : int, optional
+        向前回溯截取的数量。
+        例如 extract_num=3, interval=5, 当前帧100:
+        截取帧为 [85, 90, 95, 100]。
+    interval : int, optional
+        截取间隔帧数。
+    mode : {'full', 'mark_only'}, optional
+        'full': 记录 CSV 并保存图片。
+        'mark_only': 仅记录 CSV。
+    class_names : list, optional
+        待分类型的名称，最多支持8种。按输入顺序映射到z, x, c, v, b, n, m, o(other)
     """
 
-    def __init__(self, video_path, save_dir, class_names, extract_num=5, interval=5):
+    def __init__(self, video_path, save_dir, class_names, extract_num=5, interval=5, mode='full'):
         video_path = Path(video_path)
         if not video_path.exists():
             raise FileNotFoundError(f"Missing video file {video_path}")
@@ -53,6 +71,7 @@ class LabelingApp:
         self.interval = interval
         self.namedWindow = f'Multi-Class Object-Containing Frame Miner'
         self.dispaly_title = f'{self.namedWindow} <{video_path.name}>'
+        self.mode = mode
 
         self.key_map = {}
         safe_names = class_names[:7] if class_names else []
@@ -175,7 +194,7 @@ class LabelingApp:
 
         # Save
         self.data.save_record(
-            curr_idx, self.video.get_ms(), f"class_{label}", short_code, 'full', images
+            curr_idx, self.video.get_ms(), f"class_{label}", short_code, self.mode, images
         )
 
         self._set_msg(f"SAVED [{label.upper()}]", 2)

@@ -7,6 +7,44 @@ import shutil
 import cv2
 
 
+def save_image_safe(path, img, quality=95):
+    """
+    [Windows兼容性核心] 安全保存图片，支持中文路径。
+    使用 numpy 先将图片编码为二进制流，再写入文件。
+
+    Args:
+        path (Path | str): 保存路径
+        img (numpy.ndarray): 图像数据 (BGR)
+        quality (int): JPEG/PNG 压缩质量 (0-100)
+
+    Returns:
+        bool: 是否保存成功
+    """
+    path = str(path)
+    # 获取文件扩展名以决定编码格式
+    ext = os.path.splitext(path)[1].lower()
+
+    # 设置编码参数
+    if ext in ['.jpg', '.jpeg']:
+        params = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+    elif ext == '.png':
+        # PNG 压缩级别 0-9，将 quality (0-100) 映射一下，通常默认即可
+        params = [int(cv2.IMWRITE_PNG_COMPRESSION), 3]
+    else:
+        params = []
+
+    try:
+        # imencode 返回 (success, encoded_img)
+        success, encoded_img = cv2.imencode(ext, img, params)
+        if success:
+            encoded_img.tofile(path)
+            return True
+        return False
+    except Exception as e:
+        print(f"保存图片失败: {e}")
+        return False
+
+
 class DataManager:
     """
     处理数据持久化、文件系统操作及历史记录管理。
@@ -116,7 +154,8 @@ class DataManager:
             for img, fname_suffix in images_to_save:
                 fname = f"{self.video_name}_{label_short}_{fname_suffix}.jpg"
                 full_path = class_dir / fname
-                cv2.imwrite(str(full_path), img)
+                # cv2.imwrite(str(full_path), img)  # cv2.imwrite() 经典路径包含汉字直接保存失败返回False， 但是无任何提示
+                save_image_safe(full_path, img)  # 改为 imencode() 安全保存
                 saved_files.append(full_path)
 
         # 4. Push to Stack
