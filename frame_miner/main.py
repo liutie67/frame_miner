@@ -8,6 +8,31 @@ from .renderer import UIRenderer
 from .video_controller import VideoController
 
 
+import ctypes
+import platform
+def set_window_title_utf8(opencv_window_id, new_title):
+    """
+    强制设置 OpenCV 窗口标题支持中文 (仅限 Windows)
+
+    :param opencv_window_id: cv2.namedWindow 创建时用的英文 ID
+    :param new_title: 你想要显示的中文标题
+    """
+    if platform.system() != 'Windows':
+        return  # Mac/Linux 通常原生支持 UTF-8，无需此操作
+
+    try:
+        # 1. 获取窗口句柄 (HWND)
+        # FindWindowW 支持 Unicode
+        hwnd = ctypes.windll.user32.FindWindowW(None, opencv_window_id)
+
+        if hwnd:
+            # 2. 设置新标题
+            # SetWindowTextW 支持 Unicode
+            ctypes.windll.user32.SetWindowTextW(hwnd, new_title)
+    except Exception as e:
+        print(f"设置中文标题失败: {e}")
+
+
 class LabelingApp:
     """
     主应用程序控制器。
@@ -26,7 +51,8 @@ class LabelingApp:
         self.cfg = AppConfig()
         self.extract_num = extract_num
         self.interval = interval
-        self.namedWindow = 'Multi-Class Object-Containing Frame Miner'
+        self.namedWindow = f'Multi-Class Object-Containing Frame Miner'
+        self.dispaly_title = f'{self.namedWindow} <{video_path.name}>'
 
         self.key_map = {}
         safe_names = class_names[:7] if class_names else []
@@ -164,7 +190,9 @@ class LabelingApp:
     def _show_intro(self):
         print("Press Space to start...")
 
-        cv2.namedWindow(self.namedWindow)
+        cv2.namedWindow(self.namedWindow, cv2.WINDOW_NORMAL)
+        set_window_title_utf8(self.namedWindow, self.dispaly_title)
+
         print(f"----- 启动采集 V{self.cfg.__version__} : {self.video.name} -----")
         print(f"保存路径: {self.data.output_root}")
         print("---------------------------------------------------------")
