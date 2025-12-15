@@ -160,3 +160,95 @@ class ProjectManager:
             time.sleep(1)  # 稍微停顿，体验更好
 
         print("\n=== 所有视频处理完成 ===")
+
+    def rebuild_batch(self,
+                      new_extract_num: int,
+                      new_interval: int,
+                      target_root_dir: Union[str, Path] = './dataset',
+                      copy_csv: bool = True):
+        """
+        批量重构数据集。
+        读取当前项目的所有标记，使用新的截取参数（帧数/间隔），将图片重新生成到新的位置。
+
+        Parameters
+        ----------
+        target_root_dir : str | Path
+            新数据集存放的根目录。
+            程序会自动在此目录下创建名为 "{SourceDir}_rebuilt" 的文件夹作为本项目的新根目录。
+        new_extract_num : int
+            新的向前回溯截取数量。
+        new_interval : int
+            新的截取间隔帧数。
+        copy_csv : bool, default True
+            是否将原始 CSV 标签文件也复制到新目录。
+        """
+        target_root = Path(target_root_dir)
+
+        # 1. 构建新的项目目录 (e.g. "D:/Datasets/Traffic_rebuilt")
+        # 区别于原来的 "_labeled"，这里用 "_rebuilt" 或自定义后缀
+        new_project_dir = target_root / f"{self.source_dir.name}_rebuilt_extractNum_{new_extract_num}_interval_{new_interval}.csv"
+        new_project_dir.mkdir(parents=True, exist_ok=True)
+
+        # 2. 扫描视频文件
+        video_files = [
+            p for p in self.source_dir.iterdir()
+            if p.suffix.lower() in self.VIDEO_EXTENSIONS
+        ]
+        video_files.sort()
+
+        total = len(video_files)
+
+        print(f"\n========================================")
+        print(f" ♻️ 开始批量重构 (Batch Rebuild)")
+        print(f"========================================")
+        print(f" 源项目配置: {self.project_dir}")
+        print(f" 新输出目录: {new_project_dir}")
+        print(f" 新参数设置: extract={new_extract_num}, interval={new_interval}")
+        print(f" 待处理视频: {total} 个")
+        print(f"========================================\n")
+
+        # 3. 另外保存一份新的配置文件到新目录，方便未来追溯
+        # 这里的 config 是新参数
+        self._save_rebuild_config(new_project_dir, new_extract_num, new_interval)
+
+        for i, video_path in enumerate(video_files):
+            print(f"正在处理 [{i + 1}/{total}]: {video_path.name} ...")
+
+            # --- 关键逻辑 ---
+            # 1. 实例化 App 时，save_dir 必须指向【旧的】self.project_dir
+            #    因为我们需要 App 自动去加载旧目录下的 CSV 标记数据
+            app = LabelingApp(
+                video_path=video_path,
+                save_dir=self.project_dir,  # <--- 指向旧目录读取数据
+                class_names=self.config['class_names']  # 保持类别映射一致
+            )
+
+            # 2. 调用重构方法，将结果输出到【新的】new_project_dir
+            #    LabelingApp 内部会在 new_project_dir 下创建视频名文件夹
+            app.rebuild_dataset(
+                new_save_dir=new_project_dir,
+                new_extract_num=new_extract_num,
+                new_interval=new_interval,
+                copy_csv=copy_csv
+            )
+
+            # 释放资源
+            app.cleanup()
+            print(f"√ 完成\n")
+
+        print(f"=== ✅ 批量重构全部完成 ===")
+        print(f"新数据集位于: {new_project_dir}")
+
+    def _save_rebuild_config(self, save_path, ext_num, interval):
+        """辅助方法：在新生成的文件夹里也存一份配置说明"""
+        cfg_path = save_path / "rebuild_config.csv"
+        try:
+            with open(cfg_path, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(['parameter', 'value', 'source_project'])
+                writer.writerow(['class_names', str(self.config['class_names']), 'Inherited from source'])
+                writer.writerow(['extract_num', ext_num, 'New setting'])
+                writer.writerow(['interval', interval, 'New setting'])
+                writer.writerow(['source_path', str(self.project_dir), 'Original Data Source'])
+        except Exception:
+            pass
