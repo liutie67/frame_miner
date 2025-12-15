@@ -22,7 +22,7 @@ class ProjectManager:
 
     def __init__(self,
                  source_dir: Union[str, Path],
-                 save_dir: Union[str, Path] = '',
+                 save_dir: Union[str, Path] = './dataset',
                  class_names: List[str] = None,
                  extract_num: int = 5,
                  interval: int = 5):
