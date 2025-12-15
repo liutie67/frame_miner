@@ -25,7 +25,8 @@ class ProjectManager:
                  save_dir: Union[str, Path] = './dataset',
                  class_names: List[str] = None,
                  extract_num: int = 5,
-                 interval: int = 5):
+                 interval: int = 5,
+                 mode='mark_only'):
         """
         初始化项目管理器。
 
@@ -41,7 +42,13 @@ class ProjectManager:
             回溯截取帧数。
         interval : int
             截取间隔。
+        mode : {'full', 'mark_only'}, optional
+            'full': 记录 CSV 并保存图片。
+            'mark_only': 仅记录 CSV。
         """
+
+        self.mode = mode
+
         # 1. 路径标准化
         self.source_dir = Path(source_dir)
         self.root_save_dir = Path(save_dir)
@@ -149,7 +156,8 @@ class ProjectManager:
                 save_dir=self.project_dir,
                 class_names=self.config['class_names'],  # 使用（可能被覆盖的）配置
                 extract_num=self.config['extract_num'],
-                interval=self.config['interval']
+                interval=self.config['interval'],
+                mode=self.mode,
             )
 
             app.run()
