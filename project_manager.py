@@ -3,6 +3,8 @@ import ast
 import time
 from pathlib import Path
 from typing import Union, List, Optional
+import shutil
+from collections import defaultdict
 
 from frame_miner.main import LabelingApp
 
@@ -260,3 +262,134 @@ class ProjectManager:
                 writer.writerow(['source_path', str(self.project_dir), 'Original Data Source'])
         except Exception:
             pass
+
+    def consolidate_dataset(self, search_root: Union[str, Path] = None):
+        """
+        交互式整合数据集。
+        寻找所有相关的项目文件夹（包含原始 _labeled 和重建的 _rebuilt），
+        将其中散落在不同视频文件夹下的图片，按类别合并到一个总文件夹中。
+
+        Parameters
+        ----------
+        search_root : str | Path, optional
+            在哪里搜索文件夹。默认为初始化时的 save_dir。
+        """
+        root = Path(search_root) if search_root else self.root_save_dir
+        base_name = self.source_dir.name
+
+        # 1. 扫描符合条件的文件夹
+        # 条件：以源文件夹名开头，且不是我们要生成的 SumUp 文件夹
+        candidates = []
+        for p in root.iterdir():
+            if p.is_dir() and p.name.startswith(base_name) and "(SumUp)" not in p.name:
+                candidates.append(p)
+
+        candidates.sort()  # 排序，方便选择
+
+        if not candidates:
+            print(f"❌ 在 {root} 下未找到以 '{base_name}' 开头的项目文件夹。")
+            return
+
+        # 2. 终端交互：让用户选择
+        print(f"\n=== 数据集整合 (Consolidation) ===")
+        print(f"搜索根目录: {root}")
+        print(f"发现以下可选项目:")
+        for i, p in enumerate(candidates):
+            print(f"  [{i + 1}] {p.name}")
+
+        selected_idx = -1
+        while True:
+            try:
+                choice = input(f"\n请选择要整合的文件夹序号 (1-{len(candidates)}): ")
+                idx = int(choice) - 1
+                if 0 <= idx < len(candidates):
+                    selected_idx = idx
+                    break
+                else:
+                    print("❌ 序号超出范围，请重试。")
+            except ValueError:
+                print("❌ 请输入数字。")
+
+        src_folder = candidates[selected_idx]
+
+        # 3. 准备目标文件夹
+        # 命名规则: 原文件夹名 + (SumUp)
+        dest_folder = root / f"{src_folder.name}(SumUp)"
+
+        if dest_folder.exists():
+            print(f"⚠️ 目标文件夹已存在: {dest_folder}")
+            confirm = input("是否覆盖/合并? (y/n): ")
+            if confirm.lower() != 'y':
+                print("已取消操作。")
+                return
+
+        dest_folder.mkdir(parents=True, exist_ok=True)
+        print(f"\n🚀 开始整合: {src_folder.name} -> {dest_folder.name}")
+
+        # 4. 遍历与复制 (Flatten Logic)
+        # 我们使用 rglob 递归查找所有 .jpg 图片
+        # 目前的结构通常是: Project/VideoName/ClassX/img.jpg
+        # 我们需要识别出 ClassX，这通常是图片父文件夹的名字
+
+        stats = defaultdict(int)  # 用于统计 {class_name: count}
+        total_copied = 0
+
+        # 获取所有图片文件
+        image_files = list(src_folder.rglob("*.jpg"))
+
+        for img_path in image_files:
+            # 获取类别名 (父文件夹名)
+            class_name = img_path.parent.name
+
+            # 如果父文件夹就是项目根目录(意外情况)，则跳过或设为 unknown
+            if img_path.parent == src_folder:
+                continue
+
+            # 目标路径: dest_folder / class_name / img.jpg
+            target_class_dir = dest_folder / class_name
+            target_class_dir.mkdir(exist_ok=True)
+
+            # 复制文件
+            # 我们的文件名已经是 VideoName_Class_Frame.jpg，基本唯一，直接复制即可
+            target_file = target_class_dir / img_path.name
+
+            shutil.copy2(img_path, target_file)
+
+            stats[class_name] += 1
+            total_copied += 1
+
+            if total_copied % 100 == 0:
+                print(f"  已处理 {total_copied} 张图片...", end='\r')
+
+        print(f"  已处理 {total_copied} 张图片... 完成！")
+
+        # 5. 生成统计报表
+        self._save_statistics(dest_folder, src_folder, stats, total_copied)
+
+    def _save_statistics(self, save_path, src_name, stats, total):
+        """生成详细的统计 CSV"""
+        csv_path = save_path / "dataset_stats.csv"
+        try:
+            with open(csv_path, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Attribute', 'Value'])
+                writer.writerow(['Source Folder', src_name])
+                writer.writerow(['Total Images', total])
+                writer.writerow([])  # 空行
+                writer.writerow(['Class Name', 'Count', 'Percentage'])
+
+                # 按数量降序排列
+                sorted_stats = sorted(stats.items(), key=lambda x: x[1], reverse=True)
+
+                for cls, count in sorted_stats:
+                    percent = (count / total * 100) if total > 0 else 0
+                    writer.writerow([cls, count, f"{percent:.2f}%"])
+
+            print(f"\n✅ 整合完成！")
+            print(f"统计文件已保存: {csv_path}")
+            print("各类别统计:")
+            for cls, count in sorted_stats:
+                print(f"  - {cls}: {count}")
+
+        except Exception as e:
+            print(f"❌ 保存统计信息失败: {e}")
