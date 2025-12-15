@@ -65,7 +65,7 @@ class UIRenderer:
         start_y = 80
         # 1. Info Text
         info = f"Frame: {current_state['curr_pos']}/{current_state['total_frames']} | Speed: x{current_state['speed']}"
-        info_help = " [1][2][3][5]"
+        info_help = " [1][2][3][5][0]"
         info = info + info_help
         self.draw_shadow_text(display_img, info, (20, 40), 1, (174, 20, 255), 2)
 

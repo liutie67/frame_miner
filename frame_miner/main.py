@@ -148,6 +148,8 @@ class LabelingApp:
             self.speed = 3.0
         elif key == ord('5'):
             self.speed = 0.5
+        elif key == ord('0'):
+            self.speed = 0.1
         elif key in self.key_map:
             self._handle_tagging(key)
         elif key == 8 and self.paused:  # Backspace
