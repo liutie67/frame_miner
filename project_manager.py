@@ -266,8 +266,10 @@ class ProjectManager:
     def consolidate_dataset(self, search_root: Union[str, Path] = None):
         """
         交互式整合数据集。
-        寻找所有相关的项目文件夹（包含原始 _labeled 和重建的 _rebuilt），
-        将其中散落在不同视频文件夹下的图片，按类别合并到一个总文件夹中。
+        1. 选择源项目文件夹。
+        2. 扫描该项目中包含的所有类别。
+        3. 用户选择需要导出的类别。
+        4. 执行合并与统计。
 
         Parameters
         ----------
@@ -312,7 +314,65 @@ class ProjectManager:
 
         src_folder = candidates[selected_idx]
 
-        # 3. 准备目标文件夹
+        # --- 步骤 3: 【新增】扫描并选择类别 ---
+        print(f"\n正在扫描 {src_folder.name} 中的类别...")
+
+        # 扫描逻辑：遍历 src_folder -> 视频子文件夹 -> 类别子文件夹
+        # 使用 set 去重
+        available_classes = set()
+        for video_dir in src_folder.iterdir():
+            if video_dir.is_dir():
+                for class_dir in video_dir.iterdir():
+                    if class_dir.is_dir():
+                        # 排除可能的非类别文件夹（虽然通常不会有）
+                        available_classes.add(class_dir.name)
+
+        if not available_classes:
+            print("❌ 未在项目中找到任何类别文件夹。")
+            return
+
+        sorted_classes = sorted(list(available_classes))
+
+        print(f"发现 {len(sorted_classes)} 种类别:")
+        for i, cls_name in enumerate(sorted_classes):
+            print(f"  [{i + 1}] {cls_name}")
+
+        target_classes = set()
+        while True:
+            print("\n请输入要整合的类别序号 (用空格或逗号分隔，例如: 1, 3, 5)")
+            print("直接回车(Enter)则默认选择【所有类别】")
+            sel_str = input("您的选择: ").strip()
+
+            if not sel_str:
+                target_classes = set(sorted_classes)
+                print(">> 已选择所有类别。")
+                break
+
+            try:
+                # 兼容中文逗号，替换为英文逗号，再替换空格，最后分割
+                cleaned_str = sel_str.replace('，', ',').replace(',', ' ')
+                indices = [int(x) for x in cleaned_str.split()]
+
+                valid_selection = True
+                temp_set = set()
+                for idx in indices:
+                    real_idx = idx - 1
+                    if 0 <= real_idx < len(sorted_classes):
+                        temp_set.add(sorted_classes[real_idx])
+                    else:
+                        print(f"❌ 序号 {idx} 无效。")
+                        valid_selection = False
+
+                if valid_selection and temp_set:
+                    target_classes = temp_set
+                    print(f">> 已选择: {', '.join(target_classes)}")
+                    break
+                elif not temp_set:
+                    print("❌ 未选择有效类别。")
+            except ValueError:
+                print("❌ 输入格式错误，请输入数字。")
+
+        # 4. 准备目标文件夹
         # 命名规则: 原文件夹名 + (SumUp)
         dest_folder = root / f"{src_folder.name}(SumUp)"
 
@@ -326,7 +386,7 @@ class ProjectManager:
         dest_folder.mkdir(parents=True, exist_ok=True)
         print(f"\n🚀 开始整合: {src_folder.name} -> {dest_folder.name}")
 
-        # 4. 遍历与复制 (Flatten Logic)
+        # 5. 遍历与复制 (Flatten Logic)
         # 我们使用 rglob 递归查找所有 .jpg 图片
         # 目前的结构通常是: Project/VideoName/ClassX/img.jpg
         # 我们需要识别出 ClassX，这通常是图片父文件夹的名字
@@ -337,9 +397,17 @@ class ProjectManager:
         # 获取所有图片文件
         image_files = list(src_folder.rglob("*.jpg"))
 
+        # 进度条估算
+        total_files_scan = len(image_files)
+        print(f"扫描到 {total_files_scan} 张图片，开始筛选复制...")
+
         for img_path in image_files:
             # 获取类别名 (父文件夹名)
             class_name = img_path.parent.name
+
+            # 【关键修改】只处理用户选中的类别
+            if class_name not in target_classes:
+                continue
 
             # 如果父文件夹就是项目根目录(意外情况)，则跳过或设为 unknown
             if img_path.parent == src_folder:
@@ -358,12 +426,12 @@ class ProjectManager:
             stats[class_name] += 1
             total_copied += 1
 
-            if total_copied % 100 == 0:
-                print(f"  已处理 {total_copied} 张图片...", end='\r')
+            if total_copied % 50 == 0:
+                print(f"  已复制 {total_copied} 张...", end='\r')
 
-        print(f"  已处理 {total_copied} 张图片... 完成！")
+        print(f"  已复制 {total_copied} 张... 完成！      ") # 空格是为了覆盖之前的\r输出
 
-        # 5. 生成统计报表
+        # 6. 生成统计报表
         self._save_statistics(dest_folder, src_folder, stats, total_copied)
 
     def _save_statistics(self, save_path, src_name, stats, total):
